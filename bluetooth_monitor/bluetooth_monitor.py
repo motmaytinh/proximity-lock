@@ -16,7 +16,7 @@ __all__ = [
 
 class BluetoothMonitor:
     def __init__(self, targets: Optional[List[str]] = None, scan_duration: int = 10):
-        self.detector = BleakBluetoothDetector(target_devices=targets, scan_duration=scan_duration)
+        self.detector = BleakBluetoothDetector(target_devices=targets, scan_duration=scan_duration, log_level="WARNING")
 
     async def monitor_once(self) -> List[Dict]:
         results = []

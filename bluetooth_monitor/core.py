@@ -15,22 +15,80 @@ except ImportError:
     BLEAK_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 class BleakBluetoothDetector:
-    def __init__(self, target_devices: Optional[List[str]] = None, scan_duration: int = 10):
+    def __init__(self, target_devices: Optional[List[str]] = None, scan_duration: int = 10, log_level: str = "INFO"):
         self.target_devices = target_devices or []
         self.scan_duration = scan_duration
         self.device_history: Dict = {}
         self.discovered_devices: Dict[str, BLEDevice] = {}
 
+        # Set up logging with custom level
+        self.set_log_level(log_level)
+
+    def set_log_level(self, level: str):
+        """
+        Set the logging level for the detector.
+        DEBUG < INFO < WARNING < ERROR < CRITICAL
+
+        Args:
+            level: Logging level as string. Options:
+                - "DEBUG": Show all messages (debug, info, warning, error, critical)
+                - "INFO": Show info, warning, error, critical
+                - "WARNING": Show warning, error, critical
+                - "ERROR": Show error, critical only
+                - "CRITICAL": Show critical only
+                - "OFF" or "DISABLED": Disable all logging
+        """
+        level = level.upper()
+
+        if level in ["OFF", "DISABLED"]:
+            logger.setLevel(logging.CRITICAL + 1)  # Higher than CRITICAL to disable all
+        else:
+            log_levels = {
+                "DEBUG": logging.DEBUG,
+                "INFO": logging.INFO,
+                "WARNING": logging.WARNING,
+                "ERROR": logging.ERROR,
+                "CRITICAL": logging.CRITICAL
+            }
+
+            if level in log_levels:
+                logging.basicConfig(level=log_levels[level])
+                logger.setLevel(log_levels[level])
+            else:
+                # Default to INFO if invalid level provided
+                logging.basicConfig(level=logging.INFO)
+                logger.setLevel(logging.INFO)
+                logger.warning(f"Invalid log level '{level}', defaulting to INFO")
+
+    def _log_debug(self, message: str):
+        """Log debug message"""
+        logger.debug(message)
+
+    def _log_info(self, message: str):
+        """Log info message"""
+        logger.info(message)
+
+    def _log_warning(self, message: str):
+        """Log warning message"""
+        logger.warning(message)
+
+    def _log_error(self, message: str):
+        """Log error message"""
+        logger.error(message)
+
+    def _log_critical(self, message: str):
+        """Log critical message"""
+        logger.critical(message)
+
     async def scan_ble_devices(self, target_only: bool = False) -> List[Tuple[str, str, int, Dict]]:
         if not BLEAK_AVAILABLE:
-            logger.warning("Bleak not available, falling back to subprocess methods")
+            self._log_warning("Bleak not available, falling back to subprocess methods")
             return self.scan_devices_subprocess(target_only)
 
         try:
-            logger.info("Scanning for BLE devices...")
+            self._log_info("Scanning for BLE devices...")
             devices = []
             found_targets = set()
             scanner = None
@@ -50,15 +108,15 @@ class BleakBluetoothDetector:
                 }
 
                 devices.append((mac, name, rssi, ad_data))
-                logger.info(f"Found BLE: {name} ({mac}) - RSSI: {rssi} dBm")
+                self._log_info(f"Found BLE: {name} ({mac}) - RSSI: {rssi} dBm")
 
                 if target_only and self.target_devices:
                     for target in self.target_devices:
                         if (target.upper() in mac.upper() or target.lower() in name.lower()):
                             found_targets.add(target)
-                            logger.info(f"Target device found: {name} ({mac})")
+                            self._log_info(f"Target device found: {name} ({mac})")
                             if len(found_targets) >= len(self.target_devices) or len(found_targets) == 1:
-                                logger.info("Target device(s) found, stopping scan early")
+                                self._log_info("Target device(s) found, stopping scan early")
                                 asyncio.create_task(self._stop_scanner_delayed(scanner))
                                 return
 
@@ -88,7 +146,7 @@ class BleakBluetoothDetector:
             return devices
 
         except Exception as e:
-            logger.error(f"Error during BLE scan: {e}")
+            self._log_error(f"Error during BLE scan: {e}")
             return []
 
     async def _stop_scanner_delayed(self, scanner):
@@ -97,7 +155,7 @@ class BleakBluetoothDetector:
             try:
                 await scanner.stop()
             except Exception as e:
-                logger.warning(f"Failed to stop scanner: {e}")
+                self._log_warning(f"Failed to stop scanner: {e}")
 
     def scan_devices_subprocess(self, target_only: bool = False) -> List[Tuple[str, str, int, Dict]]:
         # Same subprocess fallback logic as original, omitted here for brevity
@@ -143,7 +201,7 @@ class BleakBluetoothDetector:
 
                     return info
         except Exception as e:
-            logger.warning(f"Failed to connect to {mac_address}: {e}")
+            self._log_warning(f"Failed to connect to {mac_address}: {e}")
             return None
 
     def estimate_distance(self, rssi: int, tx_power: Optional[int] = None) -> Optional[float]:
@@ -164,3 +222,11 @@ class BleakBluetoothDetector:
             return "Far"
         else:
             return "Very Far"
+
+    def set_logging(self, enable: bool):
+        """Enable or disable logging at runtime"""
+        self.enable_logging = enable
+        if enable:
+            logger.setLevel(logging.INFO)
+        else:
+            logger.setLevel(logging.CRITICAL)
