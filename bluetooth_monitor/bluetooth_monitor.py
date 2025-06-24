@@ -6,7 +6,6 @@ from typing import List, Optional, Dict
 from .core import BleakBluetoothDetector
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 __all__ = [
     "BluetoothMonitor",
@@ -15,8 +14,60 @@ __all__ = [
 ]
 
 class BluetoothMonitor:
-    def __init__(self, targets: Optional[List[str]] = None, scan_duration: int = 10):
-        self.detector = BleakBluetoothDetector(target_devices=targets, scan_duration=scan_duration, log_level="WARNING")
+    def __init__(self, targets: Optional[List[str]] = None, scan_duration: int = 10, log_level: str = "INFO"):
+        """
+        Initialize BluetoothMonitor with custom logging control.
+
+        Args:
+            targets: List of target device MAC addresses or names
+            scan_duration: Duration in seconds for each scan
+            log_level: Logging level. Options:
+                - "DEBUG": Show all messages
+                - "INFO": Show info, warning, error, critical (default)
+                - "WARNING": Show warning, error, critical
+                - "ERROR": Show error, critical only
+                - "CRITICAL": Show critical only
+                - "OFF" or "DISABLED": Disable all logging
+        """
+        self.detector = BleakBluetoothDetector(
+            target_devices=targets,
+            scan_duration=scan_duration,
+            log_level=log_level
+        )
+
+    def set_log_level(self, level: str):
+        """
+        Set the logging level for the monitor and its detector.
+
+        Args:
+            level: Logging level as string. Options:
+                - "DEBUG": Show all messages
+                - "INFO": Show info, warning, error, critical
+                - "WARNING": Show warning, error, critical
+                - "ERROR": Show error, critical only
+                - "CRITICAL": Show critical only
+                - "OFF" or "DISABLED": Disable all logging
+        """
+        self.detector.set_log_level(level)
+
+        # Also set the module-level logger
+        level = level.upper()
+        if level in ["OFF", "DISABLED"]:
+            logger.setLevel(logging.CRITICAL + 1)
+        else:
+            log_levels = {
+                "DEBUG": logging.DEBUG,
+                "INFO": logging.INFO,
+                "WARNING": logging.WARNING,
+                "ERROR": logging.ERROR,
+                "CRITICAL": logging.CRITICAL
+            }
+            if level in log_levels:
+                logging.basicConfig(level=log_levels[level])
+                logger.setLevel(log_levels[level])
+            else:
+                logging.basicConfig(level=logging.INFO)
+                logger.setLevel(logging.INFO)
 
     async def monitor_once(self) -> List[Dict]:
         results = []

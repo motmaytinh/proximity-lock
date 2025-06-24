@@ -17,7 +17,7 @@ def load_target_mac():
     return CONFIG_FILE.read_text().strip()
 
 async def scan_proximity(target_mac):
-    monitor = BluetoothMonitor([target_mac])
+    monitor = BluetoothMonitor([target_mac], log_level="WARNING")
     results = await monitor.monitor_once()
     for device in results:
         if device.get("mac") == target_mac:
