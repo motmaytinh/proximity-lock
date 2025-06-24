@@ -1,0 +1,18 @@
+
+[Unit]
+Description=Proximity Screen Lock Service
+After=network.target bluetooth.target graphical.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /path/to/proximity_lock_service.py
+ExecStartPre=/bin/sleep 5
+Restart=always
+RestartSec=10
+User=your-username
+Environment=PYTHONUNBUFFERED=1
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+
+[Install]
+WantedBy=multi-user.target

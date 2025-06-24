@@ -1,0 +1,53 @@
+# Byte-code files
+*.pyc
+*.pyd
+*.pyo
+__pycache__/
+
+# Distribution / packaging
+.Python
+build/
+dist/
+eggs/
+*.egg-info/
+.eggs/
+
+# Environments
+.env
+.venv
+venv/
+env/
+# virtualenv environments
+/htmlcov/
+.tox/
+.coverage
+.mypy_cache/
+.pytest_cache/
+
+# Editors and IDEs
+# VS Code
+.vscode/
+# PyCharm
+.idea/
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+# Atom
+.atom/
+
+# OS generated files
+.DS_Store
+.Trashes
+Thumbs.db
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Miscellaneous
+tmp/
+*.swp
