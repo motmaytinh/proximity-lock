@@ -35,6 +35,11 @@ class UbuntuScreenLock:
         Raises:
             StatusCheckError: If unable to determine lock status
         """
+        # First check if there's no active graphical session
+        if not self._has_active_graphical_session():
+            print(f"[{datetime.now()}] No active graphical session found - considering as locked")
+            return True
+
         for method in self.status_methods:
             try:
                 return method()
@@ -73,6 +78,37 @@ class UbuntuScreenLock:
 
         raise LockFailedError("All screen lock methods failed")
 
+    def _has_active_graphical_session(self) -> bool:
+        """Check if there's an active graphical session for the current user"""
+        try:
+            username = subprocess.getoutput("whoami")
+            output = subprocess.check_output(
+                ["loginctl", "list-sessions", "--no-legend"]
+            ).decode().splitlines()
+
+            for line in output:
+                parts = line.split()
+                if len(parts) >= 8 and parts[2] == username:
+                    # Check if this is a graphical session (seat0) and class is 'user'
+                    if parts[3] == "seat0" and parts[5] == "user":
+                        # Additional check to see if the session is active
+                        session_id = parts[0]
+                        session_info = subprocess.check_output(
+                            ["loginctl", "show-session", session_id]
+                        ).decode()
+
+                        # Check if it's an active session
+                        if "Active=yes" in session_info:
+                            return True
+
+            print(f"[{datetime.now()}] No active graphical session found for user {username}")
+            return False
+
+        except Exception as e:
+            print(f"[{datetime.now()}] Could not check for active graphical session: {e}")
+            # If we can't determine, assume there is a session to avoid false positives
+            return True
+
     def _get_current_session_id(self) -> Optional[str]:
         """Get the current session ID for the active graphical session"""
         try:
@@ -82,7 +118,7 @@ class UbuntuScreenLock:
             username = subprocess.getoutput("whoami")
             for line in output:
                 parts = line.split()
-                if len(parts) >= 4 and parts[1] == username and parts[2] == "seat0":
+                if len(parts) >= 8 and parts[2] == username and parts[3] == "seat0":
                     return parts[0]
             print(f"[{datetime.now()}] No graphical session found for user {username}")
         except Exception as e:
